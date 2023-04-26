@@ -19,134 +19,6 @@
 
    最好尽量使用transform等不影响其他节点的布局方式
 
-## 节流和防抖
-   防抖
-   function debounce(fn,wait,immediate){
-     let timeout;
-     const debounced =function(){
-       let context = this;
-       let args =arguments;
-       if(timeout){
-         clearTimeout(timeout)
-       }
-       if(immediate){
-         let fnNow = !timeout
-         timeout = setTimeout(()=>{
-           timeout =null
-         },wait)
-         if(fnNow){
-           fn.apply(context,args)
-         }
-       }else{
-          timeout = setTimeout(()=>{
-           timeout = fn.apply(context,args)
-          },wait)
-       }
-       debounced.cancel = function(){
-         clearTimeout(timeout)
-         timeout = null
-       }
-       return debounced
-     }
-   }
-
-节流  分为两种  leading和tralling
-      leading 在触发事件时马上进行一次回调执行，并在固定时间内不再进行调用。
-          function throttle(fn, wait) {
-        let timeout;
-
-        return function () {
-            const context = this;
-            const args = arguments;
-    
-            if (!timeout) {
-                fn.apply(context, args);
-                timeout = setTimeout(function () {
-                    timeout = null;
-                }, wait);
-            }
-    
-        }
-    }
-    tralling  在触发事件的一定时间后执行回调函数，期间的事件不会造成任何影响。
-      function throttle(fn, wait) {
-        let timeout
-        return function () {
-            const context = this;
-            const args = arguments;
-            if (!timeout) {
-                timeout = setTimeout(function () {
-                    fn.apply(context, args);
-                    timeout = null;
-                }, wait);
-            }
-        }
-    }
-
-
-结合两者
-    function throttle(fn, wait, options) {
-        let timeout1;
-        let timeout2;
-        options = options ? options : {};
-        const throttle = function () {
-            const context = this;
-            const args = arguments;
-            if (!timeout1) {
-                if(options.leading !== false){
-                    fn.apply(context, args);
-                }
-                timeout1 = setTimeout(function () {                        
-                    if(options.trailing !== false){
-                        fn.apply(context, args);
-                    }
-                    if(options.leading !== false){
-                        //当leading和trailing都开启的时候 保证尾部调用跟下一次调用之间有一个间隔
-                        timeout2 = setTimeout(function() {
-                            timeout1 = null;
-                        }, wait);
-                    }else{
-                        timeout1 = null;
-                    }
-                }, wait);
-
-            }
-        }
-        throttle.cancel = function(){
-            clearTimeout(timeout1);
-            clearTimeout(timeout2);
-            timeout1 = timeout2 = null;
-        }
-        
-    }
-
-
-​    
-## 深拷贝/浅拷贝
-   浅拷贝:  var obj={                           深拷贝:obj={                     
-                    a:1,                                  a:1,                  
-                    b:[1,2],                              b:[1,2],              
-                    c:true,                               c:true,               
-                    d:{aa:1,bb:2,cc:[1,2]}                d:{aa:1,bb:2,cc:[1,2]},
-                    }                                     e:obj
-                                                          }                     
-            function nomalCopy(oldObj){          function deepCopy(obj,map=new Map()){
-                 newObj={}                             if(map.has(obj)){
-                 for(var key in oldObj){                  return obj
-                   newObj[key] =oldObj[key]             }
-                 }                                     var needObj={}
-                 return newObj                         map.set(obj,needObj)
-            }                                          for(var key in obj){
-                                                           var val =obj[key]
-            或者                                            if(val&&typeof val =='object'){ 
-                                                                needObj[key] =deepCopy(val,map)
-            Object.assign(newObj,oldObj)                    }
-                                                            else{
-                                                              needObj[key]=val
-                                                            }
-                                                        }
-                                                        return needObj
-                                                   }
 
 ## 什么是 FOUC 以及 FOUT？如何产生的？如何避免？
 Flash Of Unstyled Content
@@ -194,30 +66,8 @@ Flash Of Unstyled Text
     
     若在执行某个yield阶段有语法错误  那错误会在下一个next中被抛出
     
-    yield 实现一个斐波那契数列
-     
-    function * fibbs(n){                            function fibbs(n){           
-      var a =0;var b =1                               var a =1;b=0
-      while(n-->0){                                   return {
-        yield b                                            next(){
-        b=a+b                                                 if(n-- >0){
-        a=b-a                                                    b=a+b
-      }                                                          a=b-a
-      return                                                     return b
-    }                                                         }
-                                                           }
-                                                       }
-                                                     }             
-## new 的实现
-            function new(constructor,...args){
-              var  obj =Object.create(constructor.prototype)
-              var  res =constructor.call(obj,...args)
-              if(res && typeof res ==='object'){
-                return res
-              }else{
-                return obj
-              }
-            }
+              
+
 
 ## 箭头函数不能作为构造函数的原因 
           它没有单独的this
@@ -266,35 +116,7 @@ Flash Of Unstyled Text
                 栈内存是自动分配内存的。而堆内存是动态分配内存的，不会自动释放。
                 所以每次使用完对象都要把它设为 null，从而减少内存的消耗
 
-##  任务队列
-    class TaskQueue {                         new TaskQueue()  //这种写法保证不会出现两次next函数重复调用
-      constructor() {                               .addTask(next => {
-          this.tasks = []                              console.log(1)
-          this.running = false                         next()
-        }                                              next()
-        createNext() {                              .addTask(next => {
-         var called = false                           console.log(2)
-         return () => {                                next()
-          if (called) return                          })
-          called = true                              
-          if (this.tasks.length) {                   
-            var needTask = this.tasks.shift()        
-            needTask(this.createNext())       
-          } else {                            
-            this.running = false              
-          }                                   
-        }                                     
-      }                                       
-      addTask(task) {                         
-        if (this.running) {                   
-          this.task.push(task)                
-        } else {                              
-          this.running = true                 
-          task(this.createNext())             
-        }                                     
-        return this                           
-      }                                       
-    }                                         
+         
 
 
 
@@ -378,216 +200,6 @@ process.nextTick()不存在某个阶段顺序中，它会在某一阶段的某�
 
 
 
-## 排序算法
-冒泡
-    function bubble(arr) {
-      for (var j = 0; j < arr.length - 1; j++) {
-        for (var i = 0; i < arr.length - 1 - j; i++) {
-          if (arr[i] > arr[i + 1]) {
-            let a = arr[i]
-            let b = arr[i + 1]
-            [a, b] = [b, a]
-            done = false
-          }
-        }
-        if (done) break
-      }
-      return arr
-    }
-选择排序
-      function selectsort(arr) {
-      for (var i = 0; i < arr.length - 1; i++) {
-        var minIndex = i
-        for (var j = i + 1; j < arr.length; j++) {
-          if (arr[j] < arr[minIndex]) {
-            minIndex = j
-          }
-        }
-        var a = arr[i]
-        var b = arr[minIndex]
-        [a, b] = [b, a]
-      }
-      return arr
-    }
-插入排序
-    function insertsort(arr) {              [4,5,8,2,1,6,9,3,7]
-      for (var i = 0; i < arr.length; i++) {
-        var temp = arr[i]
-        for (var j = i - 1; j >= 0; j--) {
-          if (arr[j] > temp) {
-            arr[j + 1] = arr[j]
-          } else {
-            break
-          }
-        }
-        arr[j + 1] = temp
-      }
-      return arr
-    }
-归并排序
-     function mergeSort(arr) {
-      if (arr.length < 2) {
-        return arr
-      }
-      var mid = arr.length >> 1
-      var leftArr = arr.slice(0, mid)
-      var rightArr = arr.slice(mid)
-      leftArr = mergeSort(leftArr)
-      rightArr = mergeSort(rightArr)
-      var i = 0, j = 0, k = 0;
-      while (i < leftArr.length && j < rightArr.length) {
-        if (leftArr[i] < rightArr[j]) {
-          arr[k++] = leftArr[i++]
-        }
-        else {
-          arr[k++] = rightArr[j++]
-        }
-      }
-      while (i < leftArr.length) {
-        arr[k++] = leftArr[i++]
-      }
-      while (j < rightArr.length) {
-        arr[k++] = rightArr[j++]
-      }
-      return arr
-    }
-
-快速排序
-     function qiuckSort(arr) {
-      if (arr.length < 2) { return arr }
-      var randIdx = Math.floor(Math.random() * arr.length)
-      var randItem = arr[randIdx]
-      var a = [], b = [], c = []
-      for (var i = 0; i < arr.length; i++) {
-        if (arr[i] < randItem) {
-          a.push(arr[i])
-        }
-        else if (arr[i] > randItem) {
-          b.push(arr[i])
-        }
-        else {
-          c.push(arr[i])
-        }
-      }
-      a = qiuckSort(a); b = qiuckSort(b)
-      return a.concat(c, b)
-    }
-
-
-## 判断一个数组是否有序
- functin isSorted(arr){
-   for(var i =0;i<arr.length-1;i++){
-     if(arr[i]>arr[i+1]){
-       return false
-     }
-   }
-   return true
- }
-
-
-## 数组去重方法
-   function unique (arr) {
-     return Array.from(new Set(arr))
-   }
-
-   function unique(arr){            
-        for(var i=0; i<arr.length; i++){
-            for(var j=i+1,len=arr.length; j <len; j++){
-                if(arr[i]==arr[j]){         //第一个等同于第二个，splice方法删除第二个
-                    arr.splice(j,1);
-                    j--;
-                    len--
-                }
-            }
-        }
-    return arr;
-   }
-
-
-   function unique(arr) {
-    var array = [];
-    for (var i = 0; i < arr.length; i++) {
-        if (array .indexOf(arr[i]) === -1) {
-            array .push(arr[i])
-        }
-    }
-    return array;
-   }
-   function unique(arr) {
-    var array =[];
-    for(var i = 0; i < arr.length; i++) {
-            if( !array.includes( arr[i]) ) {//includes 检测数组是否有某个值
-                    array.push(arr[i]);
-              }
-    }
-    return array
-   } 
-
-   function unique(arr) {
-      return arr.filter(function(item, index, arr) {
-          return arr.indexOf(item) === index;
-      });
-   }  
-
-  
-
-
-## 手写ajax ajax状态码  
-    function ajax(option) {
-        var ajax = new XMLHttpRequest();
-        if (option.type == 'get') {
-            ajax.open('get', option.url + '?' + JsonTostring(option.data), true); //
-            ajax.send();
-        } else if (option.type == 'post') {
-            ajax.open('post', option.url, true);
-            ajax.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-            ajax.send(JsonTostring(option.data));
-        }
-        ajax.onreadystatechange = function () { //onreadystatechnage事件可以监听ajax状态码的改变过程
-            if (ajax.readyState == 4) {
-                if (ajax.status >= 200 && ajax.status < 300 || ajax.status == 304) {
-                    option.success(ajax.responseText)
-                } else {
-                    option.error()
-                }
-            }
-        }
-    }
-    
-    function JsonTostring(json) {
-        var arr = [];
-        for (var i in json) {
-            arr.push(i + "=" + json[i]) //[leo=123,leo1=1234]
-        }
-        return arr.join("&") //"leo=123&leo1=1234"
-    }
-
-
-    // ajax({
-    //     type: 'get',
-    //     url: 'http://www.baidu.com',
-    //     data: {
-    //         'leo': '123',
-    //         'buckey': 'hello'
-    //     },
-    //     success: function (data) {
-    //         console.log(data)
-    //     },
-    //     error: function (err) {
-    //         console.log('服务器错误！')
-    //     }
-    // })
-ajax状态值  readyState
-    0 - (未初始化)还没有调用send()方法
-    1 - (载入)已调用send()方法，正在发送请求
-    2 - (载入完成)send()方法执行完成，
-    3 - (交互)正在解析响应体
-    4 - (完成)响应体解析完成，可以在客户端调用了 
-    5 - 问题出在服务器上
-ajax状态码  status
-
----------------------------------------------9月29日-------------------------------------------
-
 ## xss  sql注入  csrf  网络安全漏洞 以及解决
 xss在前端的  其实在前端对用户输入的东西转义就好了  或者通过csp限制只执行指定的js或者限制js链接哪里  
    在你写的页面的输入框内输入代码内容导致成功运行
@@ -609,73 +221,6 @@ csrf  通过cookie的选项samesite让浏览器每次访问服务器不带上coo
 
 
 
-##  居中方式
-table居中
-   td {
-      vertical-align: middle;
-    }
-    td>div {
-      height: 200px;
-      width: 200px;
-      margin: 0 auto;
-    }
-定位居中
-    fatherbox {
-      width: 200px;
-      height: 200px;
-      margin: auto;
-      position: relative;
-    }
-    sonBox {
-      width: 100px;
-      height: 100px;
-      left: 0;
-      top: 0;
-      right: 0;
-      bottom: 0;
-      position: absolute;
-    }
-单行文本居中
-    设置line-height和父级高度一样
-多行文本居中
-     1.    
-    ​    fatherbox {
-      ​      width: 200px;
-      ​      height: 200px;
-      ​      line-height: 200px;
-      ​      font-size: 0;
-    ​    }
-    ​    sonBox {
-      ​      display: inline-block;
-      ​      line-height: normal;
-      ​      vertical-align: middle;
-      ​      font-size: 16px;
-    ​    }
-       
-flex完美居中
-            fatherBox {
-                  width: 200px;
-                  height: 200px;
-                  display: flex;
-                  justify-content: center;
-                  align-items: center;
-            }
-            sonBox {
-                  width: 100px;
-                  height: 100px;
-            }
-transform 居中
-flex 的margin auto自动居中
-            fatherBox {
-                  height: 200px;
-                  width: 200px;
-                  display: flex;
-            }
-            sonBox {
-                  height: 100px;
-                  width: 100px;
-                  margin: auto;
-            }
 
 
 
@@ -697,50 +242,7 @@ flex 的margin auto自动居中
   }
 
 
-## JS 中的常用的继承方式有哪些？以及各个继承方式的优缺点。
-    es6之前利用call继承
-    function Father(name,age){
-      this.name=name;this.age=age
-    }
-    function Son(name,age,score){
-      Father.call(this,name,score)
-      this.score=score
-    }
-    var son =new Son('李四',18,100)
-    console.log(son.age)   //18
-    借助原型对象结合call的继承方法
-    function Father(){}
-    function Son(){}
-    Father.prototype.fatherFn =function(){console.log('this is father fn')}
-    son.prototype=new Father()
-     son.prototype.constructor =Son
-    
-    var son= new Son()
-    console.log(son.fatherFn())
-    
-    es6的class继承
-     class Father{
-       constructor(x,y){
-         this.x =x
-         this.y =y
-       }
-       sum(){
-         console.log(this.x+this.y)
-       }
-     }
-     class Son extends Father{
-        constructor(x,y){
-        super(x,y)
-         this.x =x
-         this.y =y
-       }
-       subStruct(){
-         console.log(this.x-this.y)
-       }
-     }
-    
-    var son =new Son(5,3) 
-     son.sum()  //8  son.subStruct()  //2
+
 
 
 ​      
@@ -773,63 +275,9 @@ Cookie 存储的内容会保留在 HTTP 请求的 Header 中，并且每次请�
    宏任务 是由宿主发起的(浏览器或node)
    微任务js引擎发起的
 
---------------------------------------------10月2日---------------------------------
 
- ## 手写foreach  reduce map  find  every  filter
 
-function map(arr,mapper){
-  var res =[]
-  for(var i=0;i<arr.length;i++){
-    res.push(mapper(arr[i]))
-  }
-  return res
-}
-function reduce(arr,f,initial){
- var startIdx= 0
- if(argumnets.length==2){
-   initial =arr[0]
-   startIdx =1
- }
- for(var i=startIdx;i<arr.length;i++){
-   initial =f(initial,arr[i])
- }
- return initial
-}
-function foreach(arr,action){
-  for(var i=0;i<arr.length;i++){
-    action(arr[i])
-  }
-}
 
-function filter(arr,test){
-  var res=[]
-  for(var i=0;i<arr.length;i++){
-    if(test(arr[i])){
-      res.push(arr[i])
-    }
-  }
-  return res
-}
-
-function every(arr,test){
-    for(var i=0;i<arr.length;i++){
-      if(!test(arr[i])){
-        return false
-      }
-    }
-    return true
-}
-
-## 洗牌算法
-function shuffle(arr,size=arr.length){
-  var lastIndex =arr.length-1
-  for(var i=0;i<size,i++){
-    var rand =Math.floor(Math.random()*(lastIndex-i+1))+i
-    swap(arr[i],arr[rand])
-  }
-  arr.length=size
-  return arr
-}
 
 
 
@@ -858,71 +306,9 @@ function shuffle(arr,size=arr.length){
 ## jsonp
     ajax不允许跨域请求，而 script 标签 src 属性可以跨域的 js 脚本，利用这个特性，服务端不再返回 JSON 格式的数据，而是返回一段调用某个函数的 js 代码，在 src 中进行了调用，这样实现了跨域。
     
-    代码实现原理
-    function getJson(url,callback){
-      var script =document.createElement('script')
-      var varName ='jsonp_'+Date.now()+Math.random().toString(16).slice(2)
-      window[varName] =callback
-      script.src=url+'&callback'+varName
-      document.body.append(script)
-    }
-
------------------------------------------------10月5日-----------------------------------------
-
-## 手写call apply  bind
-    Function.prototype.mybind=function(thisObj,...fixedArgs){
-      var fn =this
-      if(typeof fn !== 'Function'){
-        return new TypeError('It is not a function')
-      }
-      if(!thisObj){
-        thisObj=window
-      }
-      return function(...RestArgs){
-        return fn.apply(thisObj,[...fixedArgs,...RestArgs])
-      }
-    }
-    
-    Function.prototype.myCall = function(context) {
-      // 判断调用对象
-      if (typeof this !== "function") {
-        console.error("type error");
-      }
-      // 获取参数
-      let args = [...arguments].slice(1),
-        result = null;
-      // 判断 context 是否传入，如果未传入则设置为 window
-      context = context || window;
-      // 将调用函数设为对象的方法
-      context.fn = this;
-      // 调用函数
-      result = context.fn(...args);
-      // 将属性删除
-      delete context.fn;
-      return result;
-    };
 
 
-    Function.prototype.myApply = function(context) {
-      // 判断调用对象是否为函数
-      if (typeof this !== "function") {
-        throw new TypeError("Error");
-      }
-      let result = null;
-      // 判断 context 是否存在，如果未传入则为 window
-      context = context || window;
-      // 将函数设为对象的方法
-      context.fn = this;
-      // 调用方法
-      if (arguments[1]) {
-        result = context.fn(...arguments[1]);
-      } else {
-        result = context.fn();
-      }
-      // 将属性删除
-      delete context.fn;
-      return result;
-    };
+
 
 
 
@@ -946,25 +332,7 @@ function shuffle(arr,size=arr.length){
    undefined 代表的含义是未定义  ，null 代表的含义是空对象
    一般变量声明了但未定义的时候会返回 undefined，null主要用于赋值给一些可能会返回对象的变量，作为初始化。
 
-## 手写instanceof和typeof
-      function MyInstanceof(obj,constructor){
-         if(typeof obj !=='object') return false
-         if(obj.__proto__ ===constructor.prototype){
-           return true
-         }else{
-           return   MyInstanceof(obj.__proto__,constructor)
-         }
-      }
-    
-      function MyTypeOf(val){
-        if(val ==='null'){
-          return 'object'
-        }
-        if(val ==='undefined'){
-          return 'undefined'
-        }
-        return val.__proto__.constructor.name.toLowerCase()
-      }
+
 
 ## 为什么0.1+0.2 ! == 0.3，如何让其相等  
     因为计算机是通过二进制方式存数据的  而有的小数的二进制数是无限循环的数
@@ -1047,119 +415,6 @@ NaN 指不是一个数字，用于指数字类型中的错误情况，即执行�
 ##  什么叫做作用域链
  每个函数都有一个作用域链，查找变量或者函数时，需要从局部作用域到全局作用域依次查找，这些作用域集合称作作用域链
 
-## 面向对象  对象创建的方式有哪些？
-
-     基本模式
-        var person = new Object();
-          person.name = "孙悟空";
-          person.weapon = "棒子";
-          person.run = function () { return this.name + "武器是" + person.weapon;
-        }
-      工厂模式
-        function creatPerson(name, weapon) { var person = new Object();
-          person.name = "孙悟空";
-          person.weapon = "棒子";
-          person.run = function () { return this.name + "武器是" + person.weapon;
-          } return person;
-        }
-     构造函数模式
-    
-     原型模式
-    
-     原型构造函数组合模式
-    
-          function personObj(name,weapon) { this.name = name; this.weapon = weapon;}
-            personObj.prototype = {
-              run: function () { return this.name + "武器是" + this.weapon;}
-            } //创建对象
-            var wukou = new personObj("孙悟空", "棒子");
-     动态原型模式
-         function personObj(name, weapon) { this.name = name this.weapon = weapon if (typeof this.run != "function"){
-            personObj.prototype = {
-              run: function () { return this.name + "武器是" + this.weapon;}
-              }
-            }
-          } 
-          //创建对象
-          var wukou = new personObj("孙悟空", "棒子");
-
-
-## js常用的设计模式
-    单例，工厂，代理，装饰，观察者模式等
-        1) 单例：　任意对象都是单例，无须特别处理
-    var obj = {name: 'michaelqin', age: 30};
-    
-    2) 工厂: 就是同样形式参数返回不同的实例
-    function Person() { this.name = 'Person1'; }
-    function Animal() { this.name = 'Animal1'; }
-    
-    function Factory() {}
-    Factory.prototype.getInstance = function(className) {
-        return eval('new ' + className + '()');
-    }
-    
-    var factory = new Factory();
-    var obj1 = factory.getInstance('Person');
-    var obj2 = factory.getInstance('Animal');
-    console.log(obj1.name); // Person1
-    console.log(obj2.name); // Animal1
-    
-    3) 代理: 就是新建个类调用老类的接口,包一下
-    function Person() { }
-    Person.prototype.sayName = function() { console.log('michaelqin'); }
-    Person.prototype.sayAge = function() { console.log(30); }
-    
-    function PersonProxy() {
-        this.person = new Person();
-        var that = this;
-        this.callMethod = function(functionName) {
-            console.log('before proxy:', functionName);
-            that.person[functionName](); // 代理
-            console.log('after proxy:', functionName);
-        }
-    }
-    
-    var pp = new PersonProxy();
-    pp.callMethod('sayName'); // 代理调用Person的方法sayName()
-    pp.callMethod('sayAge'); // 代理调用Person的方法sayAge()
-    
-    4) 观察者: 就是事件模式，比如按钮的onclick这样的应用.
-    function Publisher() {
-        this.listeners = [];
-    }
-    Publisher.prototype = {
-        'addListener': function(listener) {
-            this.listeners.push(listener);
-        },
-    
-        'removeListener': function(listener) {
-            delete this.listeners[listener];
-        },
-    
-        'notify': function(obj) {
-            for(var i = 0; i < this.listeners.length; i++) {
-                var listener = this.listeners[i];
-                if (typeof listener !== 'undefined') {
-                    listener.process(obj);
-                }
-            }
-        }
-    }; // 发布者
-    
-    function Subscriber() {
-    
-    }
-    Subscriber.prototype = {
-        'process': function(obj) {
-            console.log(obj);
-        }
-    };　// 订阅者
-    
-    var publisher = new Publisher();
-    publisher.addListener(new Subscriber());
-    publisher.addListener(new Subscriber());
-    publisher.notify({name: 'michaelqin', ageo: 30}); // 发布一个对象到所有订阅者
-    publisher.notify('2 subscribers will both perform process'); // 发布一个字符串到所有订阅者
 
 
 ​     
@@ -1197,7 +452,13 @@ NaN 指不是一个数字，用于指数字类型中的错误情况，即执行�
     map的键可以是任意值  object必须是string或者symbol
     map的key是有序的 object是无序的
     map的键的个数可以直接size拿到 object只能手动计算
-    map可以直接被迭代  object不行
+    map可以直接被遍历  object不行
+    内存占用:不同浏览器有明显差异，但给定固定大小内存，Map 能比Object多存储50%的键值对。
+            遇到大体量结构化数据，选择Map.
+    插入性能: Map性能稍微好一点， 特别涉及大量插入操作，尤为明显，选择Map.
+    查找性能:性能相当，但在少量“键/值对”的情况下，浏览器引擎会对Object有相关的优化策略，选择Object.
+    删除性能: Map 性能优势明显，而且利用delete删除Object属性仅仅只是解除绑定
+             内存没释放，并不是真正的删除，而且会破坏V8引擎中线性结构的 快属性，极大降低访问性能，毫无疑问选择 Map.
 
 
 ## weakmap
@@ -1313,73 +574,6 @@ axios是一种基于promise封装的一种http客户端
 
   
 
-## js实现一个sleep函数
-function sleep(delay) {
-  var start = (new Date()).getTime();
-  while ((new Date()).getTime() - start < delay) {
-    continue;
-  }
-}
-
-
-
-## 函数柯里化原理
-
-    简化代码结构，提高维护性，一个方法，只有一个参数，强制了功能的单一性
-    降低代码的重复
-
-
-    // curry函数的实现
-    function curry(f, n = f.length) {
-      return function curried(...args) {
-        if (args.length < n) {
-          return curry(f.bind(null, ...args), n - args.length)
-        } else {
-          return f(...args)
-        }
-      }
-    }
-
-
-
-
-## 实现一个斐波那契数列  递归 循环
-    function fibb(n){
-        if(n < 0) throw new Error('输入的数字不能小于0');
-        if(n==1 || n==2){
-            return 1;
-        }else{
-            return fibb(n-1) + fibb (n-2);
-        }
-    }
-    
-    function fibb(n){
-        var a = [0,1,1];
-        if(n < 0) throw new Error('输入的数字不能小于0');
-        if(n >= 3){
-            for(var i=3;i<=n;i++){
-                a[i] = a[i-1]+a[i-2];
-            }
-        }
-        return a[n];
-    }
-    
-    function fibb(n){
-        var pre = 0;//表示前一个值
-        var cur = 1;//表示后一个值
-        var data;//表示当前值
-        if(n < 0) throw new Error('请输入大于0的值！');
-        if(n == 0) return 0;
-        if(n == 1) return 1;
-        if(n > 2){
-            for(var i=2;i<=n;i++){
-                data = pre + cur;
-                pre = cur;
-                cur = data;
-            }
-        }
-        return data;
-    }
 
 
 
