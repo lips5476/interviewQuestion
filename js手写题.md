@@ -155,34 +155,35 @@
 
 
 ##  任务队列
-    class TaskQueue {                         new TaskQueue()  //这种写法保证不会出现两次next函数重复调用
-      constructor() {                               .addTask(next => {
-          this.tasks = []                              console.log(1)
-          this.running = false                         next()
-        }                                              next()
-        createNext() {                              .addTask(next => {
-         var called = false                           console.log(2)
-         return () => {                                next()
-          if (called) return                          })
-          called = true                              
-          if (this.tasks.length) {                   
-            var needTask = this.tasks.shift()        
-            needTask(this.createNext())       
-          } else {                            
-            this.running = false              
-          }                                   
-        }                                     
-      }                                       
-      addTask(task) {                         
-        if (this.running) {                   
-          this.task.push(task)                
-        } else {                              
-          this.running = true                 
-          task(this.createNext())             
-        }                                     
-        return this                           
-      }                                       
-    }                                
+class TaskQueue {                         new TaskQueue()  //这种写法保证不会出现两次next数重复调用
+  constructor() {                               .addTask(next => {
+      this.tasks = []                              console.log(1)
+      this.running = false                         next()
+    }                                              next()
+    createNext() {                              .addTask(next => {
+     var called = false                           console.log(2)
+     return () => {                                next()
+      if (called) return                          })
+      called = true                              
+      if (this.tasks.length) {                   
+        var needTask = this.tasks.shift()        
+        needTask(this.createNext())       
+      } else {                            
+        this.running = false              
+      }                                   
+    }                                     
+  }                                       
+  addTask(task) {                         
+    if (this.running) {                   
+      this.task.push(task)                
+    } else {                              
+      this.running = true                 
+      task(this.createNext())             
+    }                                     
+    return this                           
+  }                                       
+}                            
+使用场景  当执行一堆异步请求 希望在页面里按请求顺序显示时   
 
 
 
@@ -766,3 +767,93 @@ function sleep(delay) {
         }
         return data;
     }
+
+
+## 前端如何渲染10万条数据
+1.使用定时器分批分组分堆依次渲染
+将10万条数据分成几堆，如一堆分10条数据，10万条就是1万堆，用定时器，每次渲染一堆，渲染一万次，这样页面就不会卡死
+
+// 创建一个每堆10个数据的分堆函数
+function averageFn(arr) {
+let i = 0;
+let res = [];
+while (i < arr.length) {
+   res.push(arr.slice(i,i + 10));// 用于分堆
+   i=i+ 10;
+  }
+  return res;
+} 
+//遍历这个二维数组，对每一项数据使用定时器一堆堆赋值渲染即可
+async plan(url) {
+   this.loading = true;
+   const res = await axios.get(url);
+   this.loading = false;
+   let twoDArr = averageFn( res .data.data );
+   for (let i = 0; i < twoDArr.length; i++) {
+      // 相当于在很短的时间内创建许多个定时任务去处理
+      setTimeout(() => {
+         this.arr = [...this.arr,...twoDArr[i]]; // 赋值渲染
+      },1000*i)
+   }
+}
+2.分页查询(前端实现)
+前端接收到所有数据后，点击页码，前端从数据数组中依次截取。比如点页码1就截取1-10条数据，点2就截取11-20条数据，以此类推
+getShowTableData() {
+   // 获取截取开始索引
+   let begin =(this.pageIndex - 1) * this.pageSize
+   // 获取截取结束索引
+   let end = this.pageIndex * this.pageSize;
+   // 通过索引去截取，从而展示
+   this.showTableData = this.allTableData.slice( begin, end):
+}  
+3.表格滚动触底加载 滚动到底，再加载一堆
+利用鼠标滚轮事件，判断当滚动条触底的时候就去加载数据。当然触底加载也是需要分堆的，将数据分好堆，然后每次触底就加载一堆即可。
+
+//判断是否触底的一些常用方式
+scrollTop + clientHeight >= innerHeight
+//上面是原生写法，然后市面上还有一些插件，基本都是类似的原理如 vue-scroller v-el-table-infinite-scroll 等
+
+handleTableScroll(event ) {
+  const target = event.target;
+  const scrollHeight = target.scrollHeight;
+  const scrollTop = target.scrollTop;
+  const clientHeight = target .clientHeight;
+  // 如果滚动到了表格底部，则加载数据/scrollHeiaht - 10，这是因为浏览器在染滚动条时会有一定的误if (scrollTop + clientHeight >= scrollHeight - 10){
+          this .loadData();
+  } 
+},
+
+4.虚拟列表/无限加载/长列表
+
+
+5.requestAnimationFrame代替setTimeout
+window.requestAnimationFrame0方法告诉浏览器您希望执行动画，并请求浏览器调用指定函数在下一次重绘之前更新动画。该方法将回调作为要在重绘之前调用的参数。
+
+
+async plan() {
+   this.loading = true;
+   const res = await axios.get(url);
+   this.loading = false;
+   // 1，将大数据量分堆
+   let twoDArr = averageFn( res .data.data);
+   // 2.定义一个函数，专门用来做赋值渲染(使用二维数组中的每一项)
+   const use2DArrItem = ( page) => {
+      // 4.从第一项，取到最后一项
+      if (page > twoDArr.length - 1) {
+         console.log("每一项都获取完了");
+         return 
+      }
+   }
+   5.使用帧请求动画
+   requestAnimationFrame(()=>{
+     // 6.取出一项，就拼接一项 (concat也行)
+     this.arr = [...this.arr, ...twoDArr[page]];
+     // 7，这一项搞定，继续下一项
+     page = page + 1;
+     //8.直至完毕(递归调用，注意结束条件)
+     use2DArrItem(page);
+   });
+  }
+  3.从二维数组中的第一项，第一堆开始获取并渲染(数组的第一项即索引为0)
+  use2DArrItem(0);
+}

@@ -88,13 +88,7 @@ Flash Of Unstyled Text
 
 
 
-## 中间件
-      当浏览器请求服务器时，会向服务器传输一些数据，那么中间件就是验证这些请求的内容是否存在或正确的一个程序
-      简单来说app.use()传入的任何函数都可以叫做中间件 
-      不可能每个请求都写一段验证,所以这些重复验证可以提取出来,由专门的中间件实现
-      express.static 快速托管静态资源
-      express.json 解析 JSON 格式的请求体数据
-      express.urlencoded 解析 URL-encoded 格式的请求体数据
+
 ---------------------------------------------9月28日------------------------------------------
 ##  let  var变量提升  const
    let有四大特性 
@@ -127,24 +121,47 @@ Flash Of Unstyled Text
 事件循环
  主线程-->主线程有异步事件-->该异步事件被挂起等待结果返回-->主线程-->异步事件结果返回要callback将callback加入事件队列等待主线程执行完-->主线程执行完-->查看任务队列的callback并执行
 
-
+而任务队列有两种
 宏任务（macro-task）：
 主线程代码（script中的代码），setTimeout，setInterval，setImmediate，requestAnimationFrame，I/O流，UI render（UI页面渲染），ajax请求
 
-微任务（micro-task）：
+微任务（micro-task）:
 process.nextTick（node v8机制引擎里有个专门的宏任务去解析）
 Promise(准确的说是new Promise().then())
-Async/Await(实际就是promise)
+Async/Await(实际就是promise)--
+queueMicroTask 强行加入一个微任务函数
 MutationObserver(html5新特性)
 var mo =new MutationObserver(()=>{
   console.log(1)
 })
 mo.observe(box,{attributes:true})   //MutationObserver这个函数用来监控某个dom节点及其可选择的后代的变化如果变化了就触发回调函数
 
-异步事件返回结果后执行的callback会被放到事件队列里  但是会按照优先级分为宏任务微任务 ，执行栈空了就先去把微任务队列清空再从宏任务中拿出一个以此类推
+然后永远是微任务先执行且是把微任务队列清空完再去清空宏任务
+注意点   当在清空宏任务的过程中又有微任务被加入微任务队列 那就会把宏任务队列停下先
+         清空微任务队列再接着执行下一个宏任务 直到宏任务被执行完且没有微任务 任务队列结束
+         简单理解就是每执行一个宏任务之前必须保证微任务队列是空的
 
-同一次事件循环中微任务永远早于宏任务
 
+
+## 区分微任务和宏任务的标准是什么
+进程的切换是宏任务，线程的切换是微任务。
+宿主环境（js运行的环境，一般为浏览器或node））发起的叫宏任务，由语言标准提供的叫微任务。
+宏任务会触发新一轮的tick，微任务不会。
+
+
+## 关于事件循环await 和 promise的区分  
+await其实就是promise的语法糖
+
+await  quer1()
+console.log('next')
+
+相当于
+new Promise((resolve,reject)=>{
+   quer1()
+   resolve()
+}).then(()=>{
+   console.log('next')
+})
 
 
 
@@ -270,17 +287,6 @@ Cookie 存储的内容会保留在 HTTP 请求的 Header 中，并且每次请�
 
 
 
-## 区分微任务和宏任务的标准是什么
-   是由谁发起的 以及是否会触发新一轮的tick
-   宏任务 是由宿主发起的(浏览器或node)
-   微任务js引擎发起的
-
-
-
-
-
-
-
 ## 事件冒泡和事件捕捉有什么区别
    都是为了解决dom事件发生顺序的问题
    事件捕获是从祖先元素捕获到目标元素
@@ -306,14 +312,6 @@ Cookie 存储的内容会保留在 HTTP 请求的 Header 中，并且每次请�
 ## jsonp
     ajax不允许跨域请求，而 script 标签 src 属性可以跨域的 js 脚本，利用这个特性，服务端不再返回 JSON 格式的数据，而是返回一段调用某个函数的 js 代码，在 src 中进行了调用，这样实现了跨域。
     
-
-
-
-
-
-
-
-
 
 
 
@@ -533,6 +531,25 @@ axios是一种基于promise封装的一种http客户端
      回调函数  promise generator  async
 
 
+
+## 什么是路由？
+
+官方定义 : 路由确定了应用程序如何响应客户端对特定端点的请求
+分为前端路由和后端路由
+
+后端路由简而言之一个页面有一个网址，由服务端渲染，就是后端路由
+
+前端路由
+前端路由就是前端自己来渲染，初始化的时候css，js，html下载，
+然后路由的切换不会触发页面刷新，后端只提供 API 来返回数据，前端渲染对应dom时通过 Ajax 获取数据 ，
+并通过 JavaScript 将数据渲染到页面 中 这整个过程就是前端路由
+
+而vue  react 框架实现的router实际上维护的是一个映射表   因为
+根据路由原理一个路径对应一个元素   那在框架里就形成了一个路径对应一个组件的映射 的键值对形式
+所以框架里的router主要在做这么一件事情
+
+
+
 -------------------------------------------10月8日---------------------------------------------
 
 
@@ -572,124 +589,10 @@ axios是一种基于promise封装的一种http客户端
    但是如果是继承过来的getter并不是自由属性 就访问不到
     
 
-  
 
 
 
 
 
-
-## 模块化
-是一种将js代码程序员拆分为可按需导入的模块机制，它可以使每个文件有私有命名空间，避免全局变量污染提高代码可复用性
-
-commonjs                                es6 module
-支持node                                支持web和node
-运行时加载                               编译时输出加载接口
-导出的是值的拷贝且可修改                  导出的值是引用地址且只读不可修改
-require是同步加载模块                    import为异步加载 有一个独立的模块依赖解析阶段
-会缓存导入的模块                         不缓存
-
-
-
-
-## es6 module
-
-可以有多个导出但只能有一个默认导出
-(默认导出没那么复杂 简单理解就是引入的时候可以引入的名称可以和导出的名称不一样，但是不是默认导出的东西引入时必须和导出时候一致)
-自动采用严格模式
-
-import存在提升行为  会提升到整个模块顶部首先执行  导入的所有东西都是只读的  编译时导入
-
-
-if(true){
-    import  xxx  from  "xxx"
-}  报错  因为提升  所以不会去分析执行if
-
-const  path =  "a"  +  pathName
-import   fn  from  path   
-编译时导入   所以编译时import  的path无效
-
-import()语法与import区别是前者为动态导入且返回一个promise后者为静态导入
-
-import("xxx.js")
-.then(({a,fn})=>{}).catch(err=>{})
-
-也支持await  和  promise
-
-const  aaa  =   await  import("xxx.js")
-const {a,fn}  =   await  import("xxx.js")
-
-const  [a,b,fn] = promise.all([
-        import("xxx.js")
-        import("xxx.js")
-        import("xxx.js")
-])
-
-
-
-## CommonJS   
-会将导入过的模块缓存起来 node端使用
-
-## CommonJS加载原理
-一个模块对应一个脚本文件  require每加载一个模块会执行整个脚本生成一个对象  此后每次执行相同require就会去对象缓存中取值  所以CommonJs模块无论require多少次都只会在第一次加载时运行一次  此后都是加载第一次返回的结果  除非手动清除缓存
-
-exports.a ="hello"
-
-const  a ="hello"
-module.exports ={
-     a,
-}
-
-require("fs")
-require("xxx.js")
-
-
-模块的分类
-内置模块(核心模块)
-nodejs源码编译时被编译成二进制，nodejs启动时直接被加载进内存
-
-
-文件模块(用户自己写的模块)
-分为以路径导入模块和自定义模块
-
-路径导入模块
-         由于提供了确切路径，引入时require会把其变成硬盘上真实路径，并将这个路径作为索引将编译后的结果缓存起来，所以速度＞自定义模块
-
-
-自定义模块
-路径分析
-        查找node_module目录
-        查找父级目录node_module
-        查找根目录下的node_module
-路径分析后若无扩展名则利用特定规则进行文件定位  按照.js  .node  .json
-
-规则
-        先在命中的文件夹目录下寻找package.json  并进行JSON.parse得到mian属性的值作为命中文件
-若无   则找这个目录下的index文件  后缀名依旧是.js  .node  .json的顺序
-若仍无   以同样规则去文件定位上一级目录
-
-
-
-
-
-
-import加载CommonJS模块
-正常CommonJS输出和export default是等同的，但是CommonJS是运行时加载所以在用import加载CommonJS模块只能用整体输入*
-import  * as xxx from  "xxx"
-
-require加载es6 module
-用require加载模块时  所有加载进来的内容都变成输入对对象的属性
-
-export default let  foo = {a:"xxx"}
-
-const needFoo = require("xxx")
-console.log(needFoo.default)
-//   {a:"xxx"}
-
-
-
-前端工程化
-
-
-
-前端如何实现数据加密   https://juejin.cn/post/7011306453373812744
+## 前端如何实现数据加密   
+https://juejin.cn/post/7011306453373812744
